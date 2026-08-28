@@ -1,34 +1,55 @@
-import cv2
-import numpy as np
+"""
+Main Application Entry Point for Gesture-Based Presentation Control.
+Milestone: Up to Week 4 (OpenCV Webcam Pipeline & Tkinter GUI).
+"""
 
-# Create a black window
-img = np.zeros((500, 900, 3), dtype=np.uint8)
+import sys
+import argparse
+import tkinter as tk
 
-# Title
-cv2.putText(img, "Gesture-Based Presentation Control", (40, 60),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+from src.gui.app import PresentationControllerApp
 
-cv2.putText(img, "Baseline Pipeline Test", (40, 100),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
 
-# Group Members
-cv2.putText(img, "Group Members:", (40, 170),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+def parse_arguments():
+    """Parse command-line options."""
+    parser = argparse.ArgumentParser(
+        description="Gesture-Based Presentation Control (Milestone Week 4)"
+    )
+    parser.add_argument(
+        "--camera-index",
+        type=int,
+        default=0,
+        help="Webcam device index to use (default: 0)",
+    )
+    return parser.parse_args()
 
-cv2.putText(img, "1. Dhruv Pankhania 24001158", (60, 220),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
 
-cv2.putText(img, "2. Krish Jadav 24000638", (60, 270),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+def main():
+    """Application main function."""
+    args = parse_arguments()
 
-cv2.putText(img, "3. Dhairya Patel 24001142", (60, 320),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2)
+    print("=" * 60)
+    print("  GESTURE-BASED PRESENTATION CONTROL")
+    print("  Milestone: Week 4 (Tkinter GUI & OpenCV Video Pipeline)")
+    print("  Team Members:")
+    print("    1. Dhruv Pankhania (24001158)")
+    print("    2. Krish Jadav     (24000638)")
+    print("    3. Dhairya Patel   (24001142)")
+    print("=" * 60)
 
-# Status
-cv2.putText(img, "Status : Pipeline OK", (40, 410),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+    # Initialize Tkinter root window
+    root = tk.Tk()
 
-cv2.imshow("Pipeline Test", img)
+    # Launch GUI Application
+    app = PresentationControllerApp(root, camera_index=args.camera_index)
 
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+    # Run main GUI event loop
+    try:
+        root.mainloop()
+    except KeyboardInterrupt:
+        print("\nShutdown signal received. Exiting cleanly...")
+        app.on_close()
+
+
+if __name__ == "__main__":
+    main()

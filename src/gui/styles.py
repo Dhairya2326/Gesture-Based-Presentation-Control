@@ -1,0 +1,46 @@
+"""
+UI Theme and Styling Constants for the Gesture-Based Presentation Control Application.
+"""
+
+# Color Palette (Modern Dark Slate / Catppuccin Mocha inspired)
+BG_DARK = "#181825"
+BG_PANEL = "#1e1e2e"
+BG_CARD = "#252538"
+BG_INPUT = "#313244"
+
+BORDER_COLOR = "#45475a"
+TEXT_PRIMARY = "#cdd6f4"
+TEXT_SECONDARY = "#a6adc8"
+TEXT_MUTED = "#6c7086"
+
+# Accent Colors
+ACCENT_BLUE = "#89b4fa"
+ACCENT_CYAN = "#89dceb"
+ACCENT_GREEN = "#a6e3a1"
+ACCENT_YELLOW = "#f9e2af"
+ACCENT_RED = "#f38ba8"
+ACCENT_PURPLE = "#cba6f7"
+
+# Button Colors
+BTN_START_BG = "#a6e3a1"
+BTN_START_FG = "#11111b"
+BTN_STOP_BG = "#f38ba8"
+BTN_STOP_FG = "#11111b"
+BTN_ACTION_BG = "#89b4fa"
+BTN_ACTION_FG = "#11111b"
+BTN_SECONDARY_BG = "#313244"
+BTN_SECONDARY_FG = "#cdd6f4"
+
+# Fonts
+FONT_FAMILY_TITLE = "Segoe UI"
+FONT_FAMILY_BODY = "Segoe UI"
+FONT_FAMILY_MONO = "Consolas"
+
+FONT_TITLE = (FONT_FAMILY_TITLE, 16, "bold")
+FONT_SUBTITLE = (FONT_FAMILY_TITLE, 10, "bold")
+FONT_SECTION = (FONT_FAMILY_TITLE, 12, "bold")
+FONT_BODY = (FONT_FAMILY_BODY, 10)
+FONT_BODY_BOLD = (FONT_FAMILY_BODY, 10, "bold")
+FONT_SMALL = (FONT_FAMILY_BODY, 9)
+FONT_MONO = (FONT_FAMILY_MONO, 9)
+FONT_FPS = (FONT_FAMILY_MONO, 11, "bold")

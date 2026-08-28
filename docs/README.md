@@ -1,3 +1,8 @@
-# Documentation
+# Project Documentation Index
 
-Project documentation goes here.
+This directory contains weekly milestone documentation, specifications, and architecture records:
+
+- **[Week 1: Literature Survey and Project Planning](week1_literature_survey_and_project_planning.md)**: Literature review, methodology selection, technology stack, and project roadmap.
+- **[Week 2: Requirement Analysis and Software Setup](week2_requirement_analysis_and_software_setup.md)**: Functional and non-functional requirements, dependencies, and system specifications.
+- **[Week 3: GUI Design](week3_gui_design.md)**: Tkinter UI wireframes, color palette tokens, typography, and component hierarchy.
+- **[Week 4: Webcam Integration](week4_webcam_integration.md)**: Multi-threaded OpenCV video pipeline, FPS calculation, device controls, and error handling.
