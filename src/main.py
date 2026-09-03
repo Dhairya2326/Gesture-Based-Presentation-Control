@@ -1,11 +1,17 @@
 """
 Main Application Entry Point for Gesture-Based Presentation Control.
-Milestone: Up to Week 4 (OpenCV Webcam Pipeline & Tkinter GUI).
+Milestone: Week 5 (MediaPipe Hand Landmark Tracking & OpenCV Pipeline).
 """
 
 import sys
+import os
+import warnings
 import argparse
 import tkinter as tk
+
+# Suppress known protobuf / TensorFlow C++ verbose deprecation warnings
+warnings.filterwarnings("ignore", category=UserWarning, module="google.protobuf")
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 from src.gui.app import PresentationControllerApp
 
@@ -13,7 +19,7 @@ from src.gui.app import PresentationControllerApp
 def parse_arguments():
     """Parse command-line options."""
     parser = argparse.ArgumentParser(
-        description="Gesture-Based Presentation Control (Milestone Week 4)"
+        description="Gesture-Based Presentation Control (Milestone Week 5 - MediaPipe Hand Tracking)"
     )
     parser.add_argument(
         "--camera-index",
@@ -30,7 +36,7 @@ def main():
 
     print("=" * 60)
     print("  GESTURE-BASED PRESENTATION CONTROL")
-    print("  Milestone: Week 4 (Tkinter GUI & OpenCV Video Pipeline)")
+    print("  Milestone: Week 5 (MediaPipe Hand Tracking & OpenCV Pipeline)")
     print("  Team Members:")
     print("    1. Dhruv Pankhania (24001158)")
     print("    2. Krish Jadav     (24000638)")
