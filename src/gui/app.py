@@ -1,5 +1,6 @@
 """
 Main Tkinter Graphical User Interface for Gesture-Based Presentation Control.
+Integrates OpenCV camera feed with real-time MediaPipe 21-hand-landmark detection.
 """
 
 import tkinter as tk
@@ -8,26 +9,38 @@ import cv2
 from PIL import Image, ImageTk
 import time
 import os
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 from src.gui import styles
 from src.processing.camera import CameraManager
+from src.processing.hand_detector import HandDetector
 
 
 class PresentationControllerApp:
     """
-    Tkinter Application embedding OpenCV webcam stream with modern dark theme UI.
+    Tkinter Application embedding OpenCV webcam stream with MediaPipe Hand Detection,
+    21 3D landmarks skeleton overlay, real-time telemetry, and modern dark theme UI.
     """
 
     def __init__(self, root: tk.Tk, camera_index: int = 0):
         self.root = root
         self.root.title("Gesture-Based Presentation Controller")
-        self.root.geometry("1200x780")
-        self.root.minsize(980, 640)
+        self.root.geometry("1240x800")
+        self.root.minsize(1020, 680)
         self.root.configure(bg=styles.BG_DARK)
 
-        # Initialize Camera Manager
+        # Initialize Camera Manager and Hand Detector
         self.camera = CameraManager(device_index=camera_index, resolution=(1280, 720))
+        self.hand_detector = HandDetector(
+            max_num_hands=2,
+            min_detection_confidence=0.7,
+            min_tracking_confidence=0.5,
+        )
+
+        # Hand detection feature toggles
+        self.enable_hand_tracking = True
+        self.enable_bounding_box = True
+        self._last_hand_count = 0
 
         # Tkinter image reference to avoid garbage collection
         self._current_photo_image: Optional[ImageTk.PhotoImage] = None
@@ -44,7 +57,7 @@ class PresentationControllerApp:
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # Start camera stream on startup
-        self.log_message("System initialized. Starting camera pipeline...")
+        self.log_message("System initialized. Starting camera and MediaPipe pipeline...")
         self.camera.start()
         self._update_ui_state()
 
@@ -98,6 +111,19 @@ class PresentationControllerApp:
         badge_box = tk.Frame(header_frame, bg=styles.BG_PANEL)
         badge_box.pack(side=tk.RIGHT, fill=tk.Y)
 
+        # Hands Detected badge
+        self.hands_badge = tk.Label(
+            badge_box,
+            text="✋ 0 HANDS",
+            font=styles.FONT_SUBTITLE,
+            fg=styles.ACCENT_PURPLE,
+            bg=styles.BG_CARD,
+            padx=12,
+            pady=4,
+            relief=tk.FLAT,
+        )
+        self.hands_badge.pack(side=tk.LEFT, padx=5)
+
         # FPS badge
         self.fps_badge = tk.Label(
             badge_box,
@@ -109,7 +135,7 @@ class PresentationControllerApp:
             pady=4,
             relief=tk.FLAT,
         )
-        self.fps_badge.pack(side=tk.LEFT, padx=6)
+        self.fps_badge.pack(side=tk.LEFT, padx=5)
 
         # Status badge
         self.status_badge = tk.Label(
@@ -122,7 +148,7 @@ class PresentationControllerApp:
             pady=4,
             relief=tk.FLAT,
         )
-        self.status_badge.pack(side=tk.LEFT, padx=6)
+        self.status_badge.pack(side=tk.LEFT, padx=5)
 
     def _build_main_content(self) -> None:
         """Build the central viewport split into video feed and controls."""
@@ -146,7 +172,7 @@ class PresentationControllerApp:
 
         vtitle = tk.Label(
             viewport_hdr,
-            text="📹 Live Camera Viewport",
+            text="📹 Live Camera & Landmark Viewport",
             font=styles.FONT_SECTION,
             fg=styles.TEXT_PRIMARY,
             bg=styles.BG_PANEL,
@@ -171,20 +197,23 @@ class PresentationControllerApp:
         self.video_canvas.pack(fill=tk.BOTH, expand=True)
 
         # Right Column: Control Deck & Cheat Sheet
-        sidebar = tk.Frame(main_frame, bg=styles.BG_DARK, width=380)
+        sidebar = tk.Frame(main_frame, bg=styles.BG_DARK, width=400)
         sidebar.pack(side=tk.RIGHT, fill=tk.BOTH, expand=False)
         sidebar.pack_propagate(False)
 
         # Card 1: Camera Controls
-        self._build_controls_card(sidebar)
+        self._build_camera_controls_card(sidebar)
 
-        # Card 2: Gesture Cheat Sheet
+        # Card 2: Hand Tracking Controls (Week 5)
+        self._build_hand_controls_card(sidebar)
+
+        # Card 3: Gesture Cheat Sheet
         self._build_gestures_card(sidebar)
 
-        # Card 3: Activity Log Viewer
+        # Card 4: Activity Log Viewer
         self._build_logs_card(sidebar)
 
-    def _build_controls_card(self, parent: tk.Frame) -> None:
+    def _build_camera_controls_card(self, parent: tk.Frame) -> None:
         """Card containing webcam device selection, toggle, and settings."""
         card = tk.Frame(
             parent,
@@ -192,52 +221,43 @@ class PresentationControllerApp:
             highlightbackground=styles.BORDER_COLOR,
             highlightthickness=1,
             padx=14,
-            pady=12,
+            pady=10,
         )
-        card.pack(fill=tk.X, pady=(0, 10))
+        card.pack(fill=tk.X, pady=(0, 8))
 
         lbl = tk.Label(
             card,
-            text="⚙️ Camera Controls",
+            text="⚙️ Camera Hardware Controls",
             font=styles.FONT_SECTION,
             fg=styles.ACCENT_BLUE,
             bg=styles.BG_PANEL,
         )
-        lbl.pack(anchor="w", pady=(0, 8))
+        lbl.pack(anchor="w", pady=(0, 6))
 
-        # Device Selector Row
-        dev_row = tk.Frame(card, bg=styles.BG_PANEL)
-        dev_row.pack(fill=tk.X, pady=3)
-
-        tk.Label(
-            dev_row, text="Device:", font=styles.FONT_BODY_BOLD, fg=styles.TEXT_SECONDARY, bg=styles.BG_PANEL
-        ).pack(side=tk.LEFT)
+        # Device & Resolution Rows
+        row1 = tk.Frame(card, bg=styles.BG_PANEL)
+        row1.pack(fill=tk.X, pady=2)
+        tk.Label(row1, text="Device:", font=styles.FONT_BODY_BOLD, fg=styles.TEXT_SECONDARY, bg=styles.BG_PANEL).pack(side=tk.LEFT)
 
         available_devs = self.camera.detect_available_cameras()
         self.device_var = tk.StringVar(value=f"Camera {self.camera.device_index}")
-        device_opts = [f"Camera {i}" for i in available_devs]
-
         self.device_combo = ttk.Combobox(
-            dev_row,
+            row1,
             textvariable=self.device_var,
-            values=device_opts,
+            values=[f"Camera {i}" for i in available_devs],
             state="readonly",
             width=14,
         )
         self.device_combo.pack(side=tk.RIGHT)
         self.device_combo.bind("<<ComboboxSelected>>", self._on_device_changed)
 
-        # Resolution Selector Row
-        res_row = tk.Frame(card, bg=styles.BG_PANEL)
-        res_row.pack(fill=tk.X, pady=3)
-
-        tk.Label(
-            res_row, text="Resolution:", font=styles.FONT_BODY_BOLD, fg=styles.TEXT_SECONDARY, bg=styles.BG_PANEL
-        ).pack(side=tk.LEFT)
+        row2 = tk.Frame(card, bg=styles.BG_PANEL)
+        row2.pack(fill=tk.X, pady=2)
+        tk.Label(row2, text="Resolution:", font=styles.FONT_BODY_BOLD, fg=styles.TEXT_SECONDARY, bg=styles.BG_PANEL).pack(side=tk.LEFT)
 
         self.res_var = tk.StringVar(value="1280x720 (HD)")
         self.res_combo = ttk.Combobox(
-            res_row,
+            row2,
             textvariable=self.res_var,
             values=list(self.camera.RESOLUTIONS.keys()),
             state="readonly",
@@ -248,9 +268,8 @@ class PresentationControllerApp:
 
         # Buttons Grid
         btn_grid = tk.Frame(card, bg=styles.BG_PANEL)
-        btn_grid.pack(fill=tk.X, pady=(10, 0))
+        btn_grid.pack(fill=tk.X, pady=(6, 0))
 
-        # Start / Stop Toggle Button
         self.btn_toggle_camera = tk.Button(
             btn_grid,
             text="⏹ Stop Camera",
@@ -260,15 +279,14 @@ class PresentationControllerApp:
             activebackground=styles.ACCENT_RED,
             relief=tk.FLAT,
             padx=10,
-            pady=6,
+            pady=4,
             command=self._toggle_camera_stream,
             cursor="hand2",
         )
         self.btn_toggle_camera.pack(fill=tk.X, pady=2)
 
-        # Secondary Buttons (Mirror, Pause, Snapshot)
         btn_sub_row = tk.Frame(btn_grid, bg=styles.BG_PANEL)
-        btn_sub_row.pack(fill=tk.X, pady=4)
+        btn_sub_row.pack(fill=tk.X, pady=2)
 
         self.btn_mirror = tk.Button(
             btn_sub_row,
@@ -277,8 +295,8 @@ class PresentationControllerApp:
             bg=styles.BTN_SECONDARY_BG,
             fg=styles.TEXT_PRIMARY,
             relief=tk.FLAT,
-            padx=8,
-            pady=4,
+            padx=6,
+            pady=3,
             command=self._toggle_mirror,
             cursor="hand2",
         )
@@ -291,8 +309,8 @@ class PresentationControllerApp:
             bg=styles.BTN_SECONDARY_BG,
             fg=styles.TEXT_PRIMARY,
             relief=tk.FLAT,
-            padx=8,
-            pady=4,
+            padx=6,
+            pady=3,
             command=self._toggle_pause,
             cursor="hand2",
         )
@@ -305,12 +323,83 @@ class PresentationControllerApp:
             bg=styles.BTN_ACTION_BG,
             fg=styles.BTN_ACTION_FG,
             relief=tk.FLAT,
-            padx=8,
-            pady=4,
+            padx=6,
+            pady=3,
             command=self._take_snapshot,
             cursor="hand2",
         )
         self.btn_snapshot.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
+
+    def _build_hand_controls_card(self, parent: tk.Frame) -> None:
+        """Card containing MediaPipe Hand Detection controls and configuration."""
+        card = tk.Frame(
+            parent,
+            bg=styles.BG_PANEL,
+            highlightbackground=styles.BORDER_COLOR,
+            highlightthickness=1,
+            padx=14,
+            pady=10,
+        )
+        card.pack(fill=tk.X, pady=(0, 8))
+
+        lbl = tk.Label(
+            card,
+            text="🖐️ MediaPipe Hand Tracking (Week 5)",
+            font=styles.FONT_SECTION,
+            fg=styles.ACCENT_PURPLE,
+            bg=styles.BG_PANEL,
+        )
+        lbl.pack(anchor="w", pady=(0, 6))
+
+        # Max Hands selector
+        row_hands = tk.Frame(card, bg=styles.BG_PANEL)
+        row_hands.pack(fill=tk.X, pady=2)
+        tk.Label(
+            row_hands, text="Max Hands:", font=styles.FONT_BODY_BOLD, fg=styles.TEXT_SECONDARY, bg=styles.BG_PANEL
+        ).pack(side=tk.LEFT)
+
+        self.max_hands_var = tk.StringVar(value="2 Hands")
+        self.max_hands_combo = ttk.Combobox(
+            row_hands,
+            textvariable=self.max_hands_var,
+            values=["1 Hand", "2 Hands"],
+            state="readonly",
+            width=14,
+        )
+        self.max_hands_combo.pack(side=tk.RIGHT)
+        self.max_hands_combo.bind("<<ComboboxSelected>>", self._on_max_hands_changed)
+
+        # Overlay Toggle Buttons Row
+        btn_row = tk.Frame(card, bg=styles.BG_PANEL)
+        btn_row.pack(fill=tk.X, pady=(6, 0))
+
+        self.btn_toggle_skeleton = tk.Button(
+            btn_row,
+            text="🦴 Skeleton: ON",
+            font=styles.FONT_SMALL,
+            bg=styles.ACCENT_CYAN,
+            fg=styles.BTN_START_FG,
+            relief=tk.FLAT,
+            padx=8,
+            pady=4,
+            command=self._toggle_skeleton,
+            cursor="hand2",
+        )
+        self.btn_toggle_skeleton.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+
+        self.btn_toggle_bbox = tk.Button(
+            btn_row,
+            text="📦 Bounding Box: ON",
+            font=styles.FONT_SMALL,
+            bg=styles.ACCENT_BLUE,
+            fg=styles.BTN_START_FG,
+            relief=tk.FLAT,
+            padx=8,
+            pady=4,
+            command=self._toggle_bounding_box,
+            cursor="hand2",
+        )
+        self.btn_toggle_bbox.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(2, 0))
 
     def _build_gestures_card(self, parent: tk.Frame) -> None:
         """Gesture Cheat Sheet reference card (Weeks 5-6 Preview)."""
@@ -320,25 +409,25 @@ class PresentationControllerApp:
             highlightbackground=styles.BORDER_COLOR,
             highlightthickness=1,
             padx=14,
-            pady=10,
+            pady=8,
         )
-        card.pack(fill=tk.X, pady=(0, 10))
+        card.pack(fill=tk.X, pady=(0, 8))
 
         lbl = tk.Label(
             card,
-            text="🖐️ Gesture Reference Guide",
+            text="💡 Gesture Guide & Hand Geometry",
             font=styles.FONT_SECTION,
-            fg=styles.ACCENT_PURPLE,
+            fg=styles.ACCENT_YELLOW,
             bg=styles.BG_PANEL,
         )
-        lbl.pack(anchor="w", pady=(0, 6))
+        lbl.pack(anchor="w", pady=(0, 4))
 
         gestures = [
-            ("👉 Point Right", "Next Slide (Right Arrow)"),
-            ("👈 Point Left", "Previous Slide (Left Arrow)"),
-            ("✋ Open Palm", "Virtual Pointer Mode"),
-            ("✊ Fist", "Pause / Freeze Tracking"),
-            ("🤏 Pinch Index", "Annotation Pen Mode"),
+            ("👉 Point Right", "Next Slide (Index Extended)"),
+            ("👈 Point Left", "Previous Slide (Thumb/Index Left)"),
+            ("✋ Open Palm", "Pointer Mode (5 Fingers Extended)"),
+            ("✊ Fist", "Pause Navigation (0 Fingers)"),
+            ("🤏 Pinch Index", "Annotation Pen (Thumb-Index Distance)"),
         ]
 
         for gesture, action in gestures:
@@ -369,18 +458,18 @@ class PresentationControllerApp:
             highlightbackground=styles.BORDER_COLOR,
             highlightthickness=1,
             padx=14,
-            pady=10,
+            pady=8,
         )
         card.pack(fill=tk.BOTH, expand=True)
 
         lbl = tk.Label(
             card,
-            text="📋 Activity Log",
+            text="📋 Activity & Telemetry Log",
             font=styles.FONT_SECTION,
             fg=styles.TEXT_PRIMARY,
             bg=styles.BG_PANEL,
         )
-        lbl.pack(anchor="w", pady=(0, 4))
+        lbl.pack(anchor="w", pady=(0, 3))
 
         self.log_text = tk.Text(
             card,
@@ -389,7 +478,7 @@ class PresentationControllerApp:
             insertbackground=styles.ACCENT_CYAN,
             font=styles.FONT_MONO,
             relief=tk.FLAT,
-            height=6,
+            height=5,
             wrap=tk.WORD,
         )
         self.log_text.pack(fill=tk.BOTH, expand=True)
@@ -402,7 +491,7 @@ class PresentationControllerApp:
 
         self.status_label = tk.Label(
             footer_frame,
-            text="Ready. Press Space to Start/Stop | M for Mirror | S for Snapshot",
+            text="Ready. Space: Start/Stop | H: Skeleton | B: Bounding Box | M: Mirror | S: Snapshot",
             font=styles.FONT_SMALL,
             fg=styles.TEXT_MUTED,
             bg=styles.BG_PANEL,
@@ -411,7 +500,7 @@ class PresentationControllerApp:
 
         version_lbl = tk.Label(
             footer_frame,
-            text="Version: Milestone Week 4 (OpenCV Pipeline)",
+            text="Version: Milestone Week 5 (MediaPipe 21-Landmark Tracking)",
             font=styles.FONT_SMALL,
             fg=styles.TEXT_MUTED,
             bg=styles.BG_PANEL,
@@ -427,6 +516,10 @@ class PresentationControllerApp:
         self.root.bind("<S>", lambda e: self._take_snapshot())
         self.root.bind("<p>", lambda e: self._toggle_pause())
         self.root.bind("<P>", lambda e: self._toggle_pause())
+        self.root.bind("<h>", lambda e: self._toggle_skeleton())
+        self.root.bind("<H>", lambda e: self._toggle_skeleton())
+        self.root.bind("<b>", lambda e: self._toggle_bounding_box())
+        self.root.bind("<B>", lambda e: self._toggle_bounding_box())
 
     def log_message(self, message: str) -> None:
         """Append a timestamped log line to the activity log."""
@@ -458,6 +551,36 @@ class PresentationControllerApp:
             self.resolution_lbl.configure(text=selected_res)
             self.log_message(f"Resolution set to {w}x{h}.")
 
+    def _on_max_hands_changed(self, event=None) -> None:
+        """Update maximum number of hands tracked simultaneously."""
+        selected = self.max_hands_var.get()
+        num_hands = 1 if "1" in selected else 2
+        self.hand_detector.close()
+        self.hand_detector = HandDetector(
+            max_num_hands=num_hands,
+            min_detection_confidence=0.7,
+            min_tracking_confidence=0.5,
+        )
+        self.log_message(f"Max hands tracking set to {num_hands}.")
+
+    def _toggle_skeleton(self) -> None:
+        """Toggle landmark skeleton visual overlay."""
+        self.enable_hand_tracking = not self.enable_hand_tracking
+        state = "ON" if self.enable_hand_tracking else "OFF"
+        bg_col = styles.ACCENT_CYAN if self.enable_hand_tracking else styles.BTN_SECONDARY_BG
+        fg_col = styles.BTN_START_FG if self.enable_hand_tracking else styles.TEXT_PRIMARY
+        self.btn_toggle_skeleton.configure(text=f"🦴 Skeleton: {state}", bg=bg_col, fg=fg_col)
+        self.log_message(f"Hand landmark skeleton overlay turned {state}.")
+
+    def _toggle_bounding_box(self) -> None:
+        """Toggle bounding box and handedness badge overlay."""
+        self.enable_bounding_box = not self.enable_bounding_box
+        state = "ON" if self.enable_bounding_box else "OFF"
+        bg_col = styles.ACCENT_BLUE if self.enable_bounding_box else styles.BTN_SECONDARY_BG
+        fg_col = styles.BTN_START_FG if self.enable_bounding_box else styles.TEXT_PRIMARY
+        self.btn_toggle_bbox.configure(text=f"📦 Bounding Box: {state}", bg=bg_col, fg=fg_col)
+        self.log_message(f"Hand bounding box overlay turned {state}.")
+
     def _toggle_camera_stream(self) -> None:
         """Start or stop the camera video capture stream."""
         if self.camera.is_running:
@@ -471,7 +594,7 @@ class PresentationControllerApp:
             )
             self.status_badge.configure(text="● STOPPED", fg=styles.ACCENT_RED)
             self.fps_badge.configure(text="FPS: 0.0")
-            # Clear canvas
+            self.hands_badge.configure(text="✋ STOPPED", fg=styles.TEXT_MUTED)
             self.video_canvas.delete("all")
         else:
             self.camera.start()
@@ -521,25 +644,68 @@ class PresentationControllerApp:
                 self.status_badge.configure(text="● TEST PATTERN", fg=styles.ACCENT_YELLOW)
 
     def _refresh_frame_loop(self) -> None:
-        """Periodic rendering loop to update canvas with latest video frame."""
+        """Periodic rendering loop to process MediaPipe landmarks and update canvas."""
         if self._is_closing:
             return
 
         if self.camera.is_running:
-            success, frame = self.camera.get_frame()
+            success, raw_frame = self.camera.get_frame()
 
-            if frame is not None:
+            if raw_frame is not None:
                 # Update FPS badge
                 fps = self.camera.get_fps()
                 self.fps_badge.configure(text=f"FPS: {fps:0.1f}")
                 self._update_ui_state()
+
+                display_frame = raw_frame
+                hand_count = 0
+
+                # Process hand landmark detection
+                if self.enable_hand_tracking:
+                    display_frame, detected_hands = self.hand_detector.find_hands(
+                        raw_frame,
+                        draw=self.enable_hand_tracking,
+                        draw_box=self.enable_bounding_box,
+                    )
+                    hand_count = len(detected_hands)
+
+                    if hand_count > 0:
+                        primary_hand = detected_hands[0]
+                        label = primary_hand["label"]
+                        conf = int(primary_hand["confidence"] * 100)
+                        if hand_count == 1:
+                            self.hands_badge.configure(
+                                text=f"✋ 1 HAND ({label}: {conf}%)",
+                                fg=styles.ACCENT_GREEN,
+                            )
+                        else:
+                            self.hands_badge.configure(
+                                text=f"✋ 2 HANDS DETECTED",
+                                fg=styles.ACCENT_GREEN,
+                            )
+                    else:
+                        self.hands_badge.configure(
+                            text="✋ 0 HANDS",
+                            fg=styles.ACCENT_PURPLE,
+                        )
+
+                    # Log detection transitions
+                    if hand_count != self._last_hand_count:
+                        if hand_count > 0:
+                            labels_str = ", ".join([f"{h['label']} ({int(h['confidence']*100)}%)" for h in detected_hands])
+                            self.log_message(f"Tracking acquired: {labels_str}")
+                        else:
+                            self.log_message("Tracking lost: Hand exited frame.")
+                        self._last_hand_count = hand_count
+                else:
+                    self.hands_badge.configure(text="✋ SKELETON OFF", fg=styles.TEXT_MUTED)
 
                 # Get canvas size
                 canvas_width = max(self.video_canvas.winfo_width(), 100)
                 canvas_height = max(self.video_canvas.winfo_height(), 100)
 
                 # Convert BGR (OpenCV) to RGB (PIL)
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                rgb_frame = cv2.cvtColor(display_frame, cv2.COLOR_BGR2RGB)
                 h, w, _ = rgb_frame.shape
 
                 # Scale to fit canvas maintaining aspect ratio
@@ -566,6 +732,10 @@ class PresentationControllerApp:
         self._is_closing = True
         try:
             self.camera.stop()
+        except Exception:
+            pass
+        try:
+            self.hand_detector.close()
         except Exception:
             pass
         self.root.destroy()
