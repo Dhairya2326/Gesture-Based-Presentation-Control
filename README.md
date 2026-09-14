@@ -11,7 +11,7 @@ A contactless, intuitive Human-Computer Interaction (HCI) system that enables pr
 
 ---
 
-## 📅 Project Progress (Milestone: Week 5)
+## 📅 Project Progress (Milestone: Week 6)
 
 | Milestone | Status | Description |
 | :--- | :---: | :--- |
@@ -20,8 +20,8 @@ A contactless, intuitive Human-Computer Interaction (HCI) system that enables pr
 | **Week 3: GUI Design** | ✅ Completed | Modern dark-themed Tkinter command center with live video viewport, telemetry badges, gesture reference guide, and real-time activity log. |
 | **Week 4: Webcam Integration using OpenCV** | ✅ Completed | Multi-threaded `CameraManager` pipeline with asynchronous frame capture, real-time FPS calculation, dynamic device switching, mirror mode, and graceful fallback. |
 | **Week 5: Hand Detection using MediaPipe** | ✅ Completed | Real-time 21 3D hand landmarks tracking, custom neon skeleton overlay, handedness classification, dynamic bounding boxes, and geometric telemetry. |
-| **Week 6: Gesture Recognition Development** | 🔜 Upcoming | Heuristic and geometric gesture classification algorithms. |
-| **Week 7: Presentation Controller Integration** | 🔜 Upcoming | Keystroke simulation for slide navigation with debounce cooldown. |
+| **Week 6: Gesture Recognition Development** | ✅ Completed | Rule-based & geometric gesture classification engine, scale normalization, temporal smoothing, HUD overlays, and presentation dispatching. |
+| **Week 7: Presentation Controller Integration** | 🔜 Upcoming | Full PyAutoGUI OS-level slide automation and presentation window management. |
 
 ---
 
@@ -29,6 +29,7 @@ A contactless, intuitive Human-Computer Interaction (HCI) system that enables pr
 - **Language**: Python 3.11
 - **Computer Vision**: OpenCV (`cv2`)
 - **Hand Landmark Tracking**: MediaPipe Hands (21 3D Keypoints & BlazePalm)
+- **Gesture Classification**: Rule-based geometric heuristics & spatial scale normalization
 - **GUI Framework**: Tkinter (Native cross-platform UI with Dark Slate theme)
 - **Image Processing**: Pillow (PIL) & NumPy
 - **Automation**: PyAutoGUI
@@ -45,6 +46,7 @@ Gesture-Based-Presentation-Control/
 │   ├── week3_gui_design.md
 │   ├── week4_webcam_integration.md
 │   ├── week5_hand_detection_mediapipe.md
+│   ├── week6_gesture_recognition_development.md
 │   └── README.md
 ├── src/
 │   ├── gui/                 # User Interface components
@@ -54,8 +56,9 @@ Gesture-Based-Presentation-Control/
 │   ├── processing/          # Computer Vision & Video pipelines
 │   │   ├── __init__.py
 │   │   ├── camera.py        # Multi-threaded OpenCV CameraManager
-│   │   └── hand_detector.py # MediaPipe Hands 21-landmark tracking module
-│   ├── presentation/        # Automation & Controller stubs
+│   │   ├── hand_detector.py # MediaPipe Hands 21-landmark tracking module
+│   │   └── gesture_recognizer.py # 21-landmark Gesture Recognition engine
+│   ├── presentation/        # Automation & Controller engine
 │   │   ├── __init__.py
 │   │   └── controller.py    # Presentation navigation controller
 │   ├── __init__.py
@@ -63,7 +66,10 @@ Gesture-Based-Presentation-Control/
 ├── tests/                   # Automated unit tests
 │   ├── test_camera.py
 │   ├── test_gui.py
-│   └── test_hand_detector.py
+│   ├── test_hand_detector.py
+│   └── test_gesture_recognizer.py
+├── build_exe.bat            # Automated PyInstaller .exe compilation script
+├── run.bat                  # One-click Windows batch launcher
 ├── requirements.txt         # Project Python dependencies
 └── README.md                # Project documentation overview
 ```
@@ -72,27 +78,30 @@ Gesture-Based-Presentation-Control/
 
 ## 🚀 Getting Started
 
-### 1. Prerequisites & Installation
-Ensure you have Python 3.11+ installed. Install the required dependencies:
-```bash
-pip install -r requirements.txt
-```
+### ⚡ Quick Start (One-Click)
+Simply **double-click [`run.bat`](file:///c:/NUV/CGIP/Presentation%20Controller%20End%20Sem/Gesture-Based-Presentation-Control/run.bat)** in the root directory. It will automatically verify your Python environment, install any missing dependencies, and launch the presentation controller GUI.
 
-### 2. Running the Application
-Launch the main presentation controller application:
-```bash
-python -m src.main
-```
-Or directly:
-```bash
-python src/main.py
-```
+### 💻 Manual Command Line
+1. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+2. Launch the application:
+   ```bash
+   python -m src.main
+   ```
+3. (Optional) Custom camera index:
+   ```bash
+   python -m src.main --camera-index 1
+   ```
 
-Optional command-line arguments:
-- Specify a custom camera device index:
-  ```bash
-  python src/main.py --camera-index 1
-  ```
+### 📦 Standalone Executable (.exe)
+To compile a standalone Windows desktop executable:
+```bash
+build_exe.bat
+```
+The compiled application will be generated in `dist\GesturePresentationController\GesturePresentationController.exe`.
+
 
 ---
 
@@ -101,11 +110,15 @@ Optional command-line arguments:
 | Action | Shortcut / Control | Description |
 | :--- | :---: | :--- |
 | **Start / Stop Stream** | `Space` / Button | Toggles webcam video capture stream on/off. |
+| **Gesture Recognition** | `G` / Button | Toggles real-time gesture recognition engine on/off. |
+| **Gesture Visual HUD**  | `D` / Button | Toggles gesture badge, pinch gauge, and laser reticle overlays. |
 | **Toggle Hand Skeleton**| `H` / Button | Toggles 21-landmark joint and bone visual overlay. |
 | **Toggle Bounding Box** | `B` / Button | Toggles hand bounding box, handedness label, and confidence badge. |
 | **Mirror Mode** | `M` / Button | Toggles horizontal frame flip for natural presenter view. |
 | **Pause / Resume** | `P` / Button | Freezes current video stream frame. |
 | **Capture Snapshot** | `S` / Button | Saves the current camera frame to `assets/`. |
+| **Smoothing Buffer** | Dropdown | Switch gesture temporal voting buffer (1 to 12 frames). |
+| **Action Cooldown** | Dropdown | Adjust presentation trigger debounce delay (0.5s to 2.0s). |
 | **Max Hands Selection** | Dropdown | Switch between single hand (1 Hand) or dual hand (2 Hands) tracking. |
 | **Device Selection** | Dropdown | Dynamically switch between connected camera devices. |
 | **Resolution Selection**| Dropdown | Switch between 640x480 (SD), 1280x720 (HD), and 1920x1080 (FHD). |

@@ -19,7 +19,7 @@ from src.gui.app import PresentationControllerApp
 def parse_arguments():
     """Parse command-line options."""
     parser = argparse.ArgumentParser(
-        description="Gesture-Based Presentation Control (Milestone Week 5 - MediaPipe Hand Tracking)"
+        description="Gesture-Based Presentation Control (Milestone Week 6 - Gesture Recognition Engine)"
     )
     parser.add_argument(
         "--camera-index",
@@ -36,7 +36,7 @@ def main():
 
     print("=" * 60)
     print("  GESTURE-BASED PRESENTATION CONTROL")
-    print("  Milestone: Week 5 (MediaPipe Hand Tracking & OpenCV Pipeline)")
+    print("  Milestone: Week 6 (Real-Time Gesture Recognition Engine)")
     print("  Team Members:")
     print("    1. Dhruv Pankhania (24001158)")
     print("    2. Krish Jadav     (24000638)")
