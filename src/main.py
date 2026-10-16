@@ -1,6 +1,6 @@
 """
 Main Application Entry Point for Gesture-Based Presentation Control.
-Milestone: Week 5 (MediaPipe Hand Landmark Tracking & OpenCV Pipeline).
+Milestone: Week 10 (Complete System - Presentation Automation, Virtual Laser, Annotations & Benchmarking).
 """
 
 import sys
@@ -19,7 +19,7 @@ from src.gui.app import PresentationControllerApp
 def parse_arguments():
     """Parse command-line options."""
     parser = argparse.ArgumentParser(
-        description="Gesture-Based Presentation Control (Milestone Week 6 - Gesture Recognition Engine)"
+        description="Gesture-Based Presentation Control (Milestone: Week 10 - End Sem Completed System)"
     )
     parser.add_argument(
         "--camera-index",
@@ -36,7 +36,7 @@ def main():
 
     print("=" * 60)
     print("  GESTURE-BASED PRESENTATION CONTROL")
-    print("  Milestone: Week 6 (Real-Time Gesture Recognition Engine)")
+    print("  Milestone: Week 10 (End Sem Project Complete)")
     print("  Team Members:")
     print("    1. Dhruv Pankhania (24001158)")
     print("    2. Krish Jadav     (24000638)")
